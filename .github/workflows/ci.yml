@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "JAVA_HOME=$JAVA_HOME_25_X64" >> "$GITHUB_ENV"'
+      - run: 'env | sort'
       - uses: actions/checkout@v6.0.2
       - uses: DeLaGuardo/setup-clojure@13.6.0
         with:
