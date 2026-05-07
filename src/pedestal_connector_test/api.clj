@@ -1,0 +1,102 @@
+(ns pedestal-connector-test.api
+  (:require [clojure.string :as string]
+            [io.pedestal.connector :as conn])
+  (:import (java.net URI)
+           (java.net.http HttpClient HttpClient$Version HttpHeaders HttpRequest HttpResponse$BodyHandlers)
+           (java.time Duration)
+           (java.util Optional)))
+
+(set! *warn-on-reflection* true)
+
+(comment
+  (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.http-kit/create-connector")
+  (System/setProperty "pedestal-connector-test.api/port" "8080"))
+
+(defn create-connector
+  [& argv]
+  (let [create-connector (some-> "pedestal-connector-test.api/create-connector"
+                           System/getProperty
+                           symbol
+                           requiring-resolve
+                           deref)]
+    (when-not (fn? create-connector)
+      (throw (ex-info "Can't find create-connector" {:property (System/getProperty "pedestal-connector-test.api/create-connector")})))
+    (apply create-connector argv)))
+
+(defn start-stop-interceptor
+  [interceptor
+   {:keys [request-method headers uri query-string body protocol]
+    :or   {request-method :get
+           uri            "/"
+           headers        {}}
+    :as   ring-request}
+   response-body-handler]
+  (let [port (Long/getLong "pedestal-connector-test.api/port" 1337)
+        conn (-> port
+               conn/default-connector-map
+               (conn/with-interceptor interceptor)
+               (create-connector {})
+               conn/start!)]
+    (try
+      (with-open [http-client (HttpClient/newHttpClient)]
+        (let [http-response (.send http-client
+                              (proxy [HttpRequest] []
+                                (method [] (-> request-method name string/upper-case))
+                                (timeout [] (Optional/of (Duration/ofSeconds 1)))
+                                (expectContinue [] false)
+                                (bodyPublisher [] (if (contains? ring-request :body)
+                                                    (Optional/of body)
+                                                    (Optional/empty)))
+                                (version [] (if (contains? ring-request :protocol)
+                                              (Optional/of
+                                                (case protocol
+                                                  "HTTP/1.1" HttpClient$Version/HTTP_1_1
+                                                  "HTTP/2.0" HttpClient$Version/HTTP_2))
+                                              (Optional/empty)))
+                                (headers [] (HttpHeaders/of headers
+                                              (constantly true)))
+                                (uri [] (URI. "http" nil "0" port uri query-string nil)))
+                              response-body-handler)]
+          {:body    (.body http-response)
+           :headers (into {}
+                      (map (fn [[k vs]]
+                             [k (if (next vs)
+                                  (vec vs)
+                                  (first vs))]))
+                      (.map (.headers http-response)))
+           :status  (.statusCode http-response)}))
+      (finally
+        (conn/stop! conn)))))
+
+(defn simple-request
+  ([ring-handler ring-request]
+   (simple-request ring-handler ring-request (HttpResponse$BodyHandlers/discarding)))
+  ([ring-handler ring-request response-body-handler]
+   (start-stop-interceptor
+     {:name  :ring-handler
+      :enter (fn [{:keys [request]
+                   :as   ctx}]
+               (assoc ctx :response (ring-handler request)))}
+     ring-request
+     response-body-handler)))
+
+(defn capture-request
+  ([ring-request]
+   (capture-request ring-request identity))
+  ([ring-request on-body]
+   (let [*request (promise)
+         {:keys [status]} (start-stop-interceptor
+                            {:name  :ring-handler
+                             :enter (fn [{:keys [request]
+                                          :as   ctx}]
+                                      (deliver *request (if (contains? request :body)
+                                                          (update request :body on-body)
+                                                          request))
+                                      (assoc ctx :response {:status 204}))}
+                            ring-request
+                            (HttpResponse$BodyHandlers/discarding))]
+     (when-not (== status 204)
+       (throw (ex-info "Unexpected return" {:status status})))
+     (if (realized? *request)
+       @*request
+       (throw (ex-info "Unrealized request" {}))))))
