@@ -67,8 +67,9 @@
                                     (first vs))]))
                         (.map (.headers http-response)))
              :status  (.statusCode http-response)})
-          (when (instance? AutoCloseable http-client)
-            (.close ^AutoCloseable http-client))))
+          (finally
+            (when (instance? AutoCloseable http-client)
+              (.close ^AutoCloseable http-client)))))
       (finally
         (conn/stop! conn)))))
 
