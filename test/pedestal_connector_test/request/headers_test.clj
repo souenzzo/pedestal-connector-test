@@ -12,3 +12,12 @@
           api/capture-request
           :headers
           (select-keys ["hello"])))))
+
+(deftest multiple-headers
+  (is (= {"hello" (case api/connector-ident
+                    :jetty "a,b"
+                    :http-kit "a\nb")}
+        (-> {:headers {"hello" ["a" "b"]}}
+          api/capture-request
+          :headers
+          (select-keys ["hello"])))))
