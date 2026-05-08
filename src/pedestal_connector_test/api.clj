@@ -13,6 +13,13 @@
   (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.http-kit/create-connector")
   (System/setProperty "pedestal-connector-test.api/port" "8080"))
 
+(def connector-ident
+  (let [create-connector (System/getProperty "pedestal-connector-test.api/create-connector")]
+    (case create-connector
+      "io.pedestal.http.http-kit/create-connector" :http-kit
+      "io.pedestal.http.jetty/create-connector" :jetty
+      create-connector)))
+
 (defn create-connector
   [& argv]
   (let [create-connector (some-> "pedestal-connector-test.api/create-connector"
