@@ -20,4 +20,19 @@
         (-> {:headers {"hello" ["a" "b"]}}
           api/capture-request
           :headers
-          (select-keys ["hello"])))))
+          (select-keys ["hello"]))))
+  (is (= {"hello" (case api/connector-ident
+                    :jetty ",,,"
+                    :http-kit ",\n,")}
+        (-> {:headers {"hello" ["," ","]}}
+          api/capture-request
+          :headers
+          (select-keys ["hello"]))))
+  (is (= {"hello" (case api/connector-ident
+                    :jetty "a,c\\nd"
+                    :http-kit "a\nc\\nd")}
+        (-> {:headers {"hello" ["a\n" "c\\nd"]}}
+          api/capture-request
+          :headers
+          (select-keys ["hello"])
+          (doto clojure.pprint/pprint)))))
