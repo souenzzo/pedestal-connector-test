@@ -2,7 +2,6 @@
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
-            [io.pedestal.http.jetty]
             [io.pedestal.interceptor :as interceptor]
             [pedestal-connector-test.api :as api])
   (:import (java.io ByteArrayInputStream)
