@@ -100,18 +100,48 @@
    (capture-request ring-request identity))
   ([ring-request on-body]
    (let [*request (promise)
-         {:keys [status]} (start-stop-interceptor
-                            {:name  :ring-handler
-                             :enter (fn [{:keys [request]
-                                          :as   ctx}]
-                                      (deliver *request (if (contains? request :body)
-                                                          (update request :body on-body)
-                                                          request))
-                                      (assoc ctx :response {:status 204}))}
-                            ring-request
-                            (HttpResponse$BodyHandlers/discarding))]
+         {:keys [status]
+          :as ring-response} (start-stop-interceptor
+                               {:name  :ring-handler
+                                :enter (fn [{:keys [request]
+                                             :as   ctx}]
+                                         (deliver *request (if (contains? request :body)
+                                                             (update request :body on-body)
+                                                             request))
+                                         (assoc ctx :response {:status 204}))}
+                               ring-request
+                               (HttpResponse$BodyHandlers/ofString))]
      (when-not (== status 204)
-       (throw (ex-info "Unexpected return" {:status status})))
+       (throw (ex-info "Unexpected return" ring-response)))
      (if (realized? *request)
        @*request
        (throw (ex-info "Unrealized request" {}))))))
+
+(defonce *dev-local (atom nil))
+
+(defn start!
+  []
+  (swap! *dev-local
+    (fn [conn]
+      (some-> conn conn/stop!)
+      (-> 8888
+        (conn/default-connector-map)
+        (conn/with-interceptor
+          {:name :handler
+           :enter (fn [ctx]
+                    (def _ctx ctx)
+                    (assoc ctx :response {:status 204}))})
+        (create-connector {})
+        conn/start!))))
+
+(defn stop!
+  []
+  (swap! *dev-local (fn [conn]
+                      (some-> conn conn/stop!))))
+
+(comment
+  (start!)
+  (stop!)
+  (-> _ctx
+    :request
+    :headers))

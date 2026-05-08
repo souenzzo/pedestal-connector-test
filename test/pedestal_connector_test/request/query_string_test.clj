@@ -15,6 +15,33 @@
           api/capture-request
           :query-string))))
 
+
+(deftest edge-values
+  (is (= "%20"
+        (-> {:query-string " "}
+          api/capture-request
+          :query-string)))
+  (is (= "%20%20"
+        (-> {:query-string "  "}
+          api/capture-request
+          :query-string)))
+  (is (= "/!$&'()*+,-.?~"
+        (-> {:query-string "/!$&'()*+,-.?~"}
+          api/capture-request
+          :query-string)))
+  (is (= "%25"
+        (-> {:query-string "%"}
+          api/capture-request
+          :query-string)))
+  (is (= "%2520"
+        (-> {:query-string "%20"}
+          api/capture-request
+          :query-string)))
+  (is (= "%08%09%0A%0C%0D"
+        (-> {:query-string "\b\t\n\f\r"}
+          api/capture-request
+          :query-string))))
+
 (defspec alphanumeric-query 100
   (prop/for-all [query-string (gen/such-that seq
                                 gen/string-alphanumeric)]
