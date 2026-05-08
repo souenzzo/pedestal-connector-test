@@ -1,6 +1,7 @@
 (ns pedestal-connector-test.api
   (:require [clojure.string :as string]
-            [io.pedestal.connector :as conn])
+            [io.pedestal.connector :as conn]
+            [io.pedestal.interceptor :as interceptor])
   (:import (java.lang AutoCloseable)
            (java.net URI)
            (java.net.http HttpClient HttpClient$Version HttpHeaders HttpRequest HttpResponse$BodyHandlers)
@@ -85,10 +86,12 @@
    (simple-request ring-handler ring-request (HttpResponse$BodyHandlers/discarding)))
   ([ring-handler ring-request response-body-handler]
    (start-stop-interceptor
-     {:name  :ring-handler
-      :enter (fn [{:keys [request]
-                   :as   ctx}]
-               (assoc ctx :response (ring-handler request)))}
+     (if (interceptor/interceptor? ring-handler)
+       ring-handler
+       {:name  :ring-handler
+        :enter (fn [{:keys [request]
+                     :as   ctx}]
+                 (assoc ctx :response (ring-handler request)))})
      ring-request
      response-body-handler)))
 
