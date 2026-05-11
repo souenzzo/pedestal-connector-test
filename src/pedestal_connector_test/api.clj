@@ -154,7 +154,7 @@
             (.thenRun (.sendClose ws WebSocket/NORMAL_CLOSURE "Fim")
               (fn []
                 (deliver done :ok)))
-            (.shutdownNow http-client)
+            #_(.shutdownNow http-client)
             (deref done 1000 :timeout))
           (when (instance? AutoCloseable http-client)
             (.close http-client))))
