@@ -9,7 +9,7 @@
                                    "-Dorg.slf4j.simpleLogger.log.org.eclipse.jetty.ee10.servlet.ServletContextHandler=warn"
                                    "-Dorg.slf4j.simpleLogger.log.org.eclipse.jetty.server.handler.ContextHandler=warn"
                                    "-Dorg.slf4j.simpleLogger.log.org.eclipse.jetty.session.DefaultSessionIdManager=warn"]
-                      :extra-deps {io.pedestal/pedestal.jetty {:mvn/version "0.8.1"}
+                      :extra-deps {io.pedestal/pedestal.jetty {:mvn/version "0.8.2-beta-5"}
                                    org.slf4j/slf4j-simple     {:mvn/version "2.0.17"}}}
            :http-kit {:jvm-opts   ["-Dpedestal-connector-test.api/create-connector=io.pedestal.http.http-kit/create-connector"]
                       :extra-deps {io.pedestal/pedestal.http-kit {:mvn/version "0.8.2-beta-5"}}}
