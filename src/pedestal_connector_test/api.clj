@@ -140,21 +140,24 @@
                (create-connector nil))]
     (try
       (conn/start! conn)
-      (with-open [http-client (HttpClient/newHttpClient)]
-        (let [listener (reify WebSocket$Listener)
-              ^WebSocket ws (-> http-client
-                              .newWebSocketBuilder
-                              (.buildAsync (URI/create (str "ws://0:" port))
-                                listener)
-                              .join)
-              done (promise)]
-          (doseq [op ops]
-            (op ws))
-          (.thenRun (.sendClose ws WebSocket/NORMAL_CLOSURE "Fim")
-            (fn []
-              (deliver done :ok)))
-          (.shutdownNow http-client)
-          (deref done 1000 :timeout)))
+      (let [http-client (HttpClient/newHttpClient)]
+        (try
+          (let [listener (reify WebSocket$Listener)
+                ^WebSocket ws (-> http-client
+                                .newWebSocketBuilder
+                                (.buildAsync (URI/create (str "ws://0:" port))
+                                  listener)
+                                .join)
+                done (promise)]
+            (doseq [op ops]
+              (op ws))
+            (.thenRun (.sendClose ws WebSocket/NORMAL_CLOSURE "Fim")
+              (fn []
+                (deliver done :ok)))
+            (.shutdownNow http-client)
+            (deref done 1000 :timeout))
+          (when (instance? AutoCloseable http-client)
+            (.close http-client))))
       (finally
         (conn/stop! conn)))
     @*evts))
