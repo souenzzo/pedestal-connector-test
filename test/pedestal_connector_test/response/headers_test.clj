@@ -15,3 +15,28 @@
           (api/simple-request {})
           :headers
           (select-keys ["hello"])))))
+
+(deftest multiple-headers
+  (is (= {"hello" ["a" "b"]}
+        (-> (constantly {:headers {"hello" ["a" "b"]}
+                         :status  204})
+          (api/simple-request {})
+          :headers
+          (select-keys ["hello"])
+          #_(doto clojure.pprint/pprint))))
+  (is (= {"hello" ["a" "b" "c" "d"]}
+        (-> (constantly {:headers {"hello" ["a" "b"]
+                                   "Hello" ["c" "d"]}
+                         :status  204})
+          (api/simple-request {})
+          :headers
+          (select-keys ["hello"])
+          #_(doto clojure.pprint/pprint))))
+  (is (= {"hello" ["a" "b" "a" "b"]}
+        (-> (constantly {:headers {"hello" ["a" "b"]
+                                   "hellO" ["a" "b"]}
+                         :status  204})
+          (api/simple-request {})
+          :headers
+          (select-keys ["hello"])
+          #_(doto clojure.pprint/pprint)))))
