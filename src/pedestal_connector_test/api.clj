@@ -23,13 +23,14 @@
 
 (defn create-connector
   [& argv]
-  (let [create-connector (some-> "pedestal-connector-test.api/create-connector"
-                           System/getProperty
+  (let [create-connector-str (System/getProperty "pedestal-connector-test.api/create-connector")
+
+        create-connector (some-> create-connector-str
                            symbol
                            requiring-resolve
                            deref)]
     (when-not (fn? create-connector)
-      (throw (ex-info "Can't find create-connector" {:property (System/getProperty "pedestal-connector-test.api/create-connector")})))
+      (throw (ex-info "Can't find create-connector" {:property create-connector-str})))
     (apply create-connector argv)))
 
 (defn start-stop-interceptor

@@ -1,6 +1,5 @@
 (ns user.ws
-  (:require [clojure.core.async :as async]
-            [io.pedestal.connector :as conn]
+  (:require [io.pedestal.connector :as conn]
             [io.pedestal.log :as log]
             [io.pedestal.service.websocket :as websocket]
             [pedestal-connector-test.api :as api])
@@ -11,22 +10,29 @@
 
 (defn -main
   [& _]
-  (let [*evts (atom {})
+  (let [*evts (atom [])
+        *channel (promise)
         conn (-> (conn/default-connector-map 8080)
                (conn/with-interceptor
                  (websocket/websocket-interceptor ::ws
                    {:on-close  (fn on-close [channel proc reason]
-                                 (swap! *evts conj {:on-text {:channel channel
-                                                              :proc    proc
-                                                              :reason  reason}}))
+                                 (log/info :on :close)
+                                 (swap! *evts conj {:on-close {:channel channel
+                                                               :proc    proc
+                                                               :reason  reason}}))
                     :on-binary (fn on-binary [channel proc buffer]
+                                 (log/info :on :binary)
                                  (swap! *evts conj {:on-binary {:channel channel
                                                                 :proc    proc
                                                                 :buffer  buffer}}))
                     :on-open   (fn [channel ring-request]
-                                 (swap! *evts conj {:on-open {:channel channel :ring-request ring-request}})
+                                 (log/info :on :open)
+                                 (deliver *channel channel)
+                                 (swap! *evts conj {:on-open {:channel      channel
+                                                              :ring-request ring-request}})
                                  (websocket/start-ws-connection channel nil))
                     :on-text   (fn [channel proc text]
+                                 (log/info :on :text)
                                  (swap! *evts conj {:on-text {:channel channel
                                                               :proc    proc
                                                               :text    text}}))}))
@@ -41,13 +47,14 @@
                                 listener)
                               .join)
               done (promise)]
-          (Thread/sleep 100)
           (.thenRun (.sendClose ws WebSocket/NORMAL_CLOSURE "Fim")
             (fn []
               (deliver done :ok)))
-          (deref done 1000 :timeout)))
+          (deref done 1000 :timeout)
+          (.shutdownNow http-client)))
       (finally
-        (conn/stop! conn)))))
+        (conn/stop! conn)))
+    @*evts))
 
 (comment
 
