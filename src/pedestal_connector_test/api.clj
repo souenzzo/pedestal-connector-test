@@ -18,6 +18,7 @@
   (let [create-connector (System/getProperty "pedestal-connector-test.api/create-connector")]
     (case create-connector
       "io.pedestal.http.http-kit/create-connector" :http-kit
+      "protojure.pedestal.core/create-connector" :protojure
       "io.pedestal.http.jetty/create-connector" :jetty
       create-connector)))
 
@@ -30,7 +31,10 @@
                            deref)]
     (when-not (fn? create-connector)
       (throw (ex-info "Can't find create-connector" {:property (System/getProperty "pedestal-connector-test.api/create-connector")})))
-    (apply create-connector argv)))
+    (apply create-connector
+      (case connector-ident
+        :protojure (take 1 argv)
+        argv))))
 
 (defn start-stop-interceptor
   [interceptor

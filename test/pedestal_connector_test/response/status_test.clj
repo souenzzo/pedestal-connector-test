@@ -6,7 +6,8 @@
 
 (comment
   (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.http-kit/create-connector")
-  (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.jetty/create-connector"))
+  (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.jetty/create-connector")
+  (System/setProperty "pedestal-connector-test.api/create-connector" "protojure.pedestal.core/create-connector"))
 
 (deftest status-204
   (is (= 204
