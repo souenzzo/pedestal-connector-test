@@ -8,4 +8,5 @@ behavioral consistency across different connector implementations.
 ```shell
 clojure -X:jetty:test
 clojure -X:http-kit:test
+clojure -M:protojure:test -e websocket
 ```
