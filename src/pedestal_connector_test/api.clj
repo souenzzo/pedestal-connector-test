@@ -1,10 +1,12 @@
 (ns pedestal-connector-test.api
   (:require [clojure.string :as string]
             [io.pedestal.connector :as conn]
-            [io.pedestal.interceptor :as interceptor])
+            [io.pedestal.interceptor :as interceptor]
+            [io.pedestal.service.websocket :as websocket])
   (:import (java.lang AutoCloseable)
            (java.net URI)
-           (java.net.http HttpClient HttpClient$Version HttpHeaders HttpRequest HttpResponse$BodyHandlers)
+           (java.net.http HttpClient HttpClient$Version HttpHeaders HttpRequest HttpResponse$BodyHandlers WebSocket
+                          WebSocket$Listener)
            (java.time Duration)
            (java.util Optional)))
 
@@ -23,13 +25,14 @@
 
 (defn create-connector
   [& argv]
-  (let [create-connector (some-> "pedestal-connector-test.api/create-connector"
-                           System/getProperty
+  (let [create-connector-str (System/getProperty "pedestal-connector-test.api/create-connector")
+
+        create-connector (some-> create-connector-str
                            symbol
                            requiring-resolve
                            deref)]
     (when-not (fn? create-connector)
-      (throw (ex-info "Can't find create-connector" {:property (System/getProperty "pedestal-connector-test.api/create-connector")})))
+      (throw (ex-info "Can't find create-connector" {:property create-connector-str})))
     (apply create-connector argv)))
 
 (defn start-stop-interceptor
@@ -116,6 +119,49 @@
      (if (realized? *request)
        @*request
        (throw (ex-info "Unrealized request" {}))))))
+
+
+(defn capture-ws-events
+  [ws-opts & ops]
+  (let [port (Long/getLong "pedestal-connector-test.api/port" 1337)
+        *evts (atom [])
+        on-evt (fn [evt]
+                 (fn [& args]
+                   (swap! *evts conj evt)
+                   (let [impl (get ws-opts evt (constantly nil))]
+                     (apply impl args))))
+        conn (-> (conn/default-connector-map port)
+               (conn/with-routes
+                 #{["/" :get (websocket/websocket-interceptor ::ws
+                               {:on-close  (on-evt :on-close)
+                                :on-binary (on-evt :on-binary)
+                                :on-open   (on-evt :on-open)
+                                :on-text   (on-evt :on-text)})]})
+               (create-connector nil))]
+    (try
+      (conn/start! conn)
+      (let [http-client (HttpClient/newHttpClient)]
+        (try
+          (let [listener (reify WebSocket$Listener)
+                ^WebSocket ws (-> http-client
+                                .newWebSocketBuilder
+                                (.buildAsync (URI/create (str "ws://0:" port))
+                                  listener)
+                                .join)
+                done (promise)]
+            (doseq [op ops]
+              (op ws))
+            (.thenRun (.sendClose ws WebSocket/NORMAL_CLOSURE "Fim")
+              (fn []
+                (deliver done :ok)))
+            #_(.shutdownNow http-client)
+            (deref done 1000 :timeout))
+          (when (instance? AutoCloseable http-client)
+            (.close http-client))))
+      (finally
+        (conn/stop! conn)))
+    @*evts))
+
 
 (defonce *dev-local (atom nil))
 
