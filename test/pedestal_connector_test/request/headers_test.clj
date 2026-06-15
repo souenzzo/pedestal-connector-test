@@ -14,23 +14,17 @@
           (select-keys ["hello"])))))
 
 (deftest multiple-headers
-  (is (= {"hello" (case api/connector-ident
-                    :jetty "a,b"
-                    :http-kit "a\nb")}
+  (is (= {"hello" "a,b"}
         (-> {:headers {"hello" ["a" "b"]}}
           api/capture-request
           :headers
           (select-keys ["hello"]))))
-  (is (= {"hello" (case api/connector-ident
-                    :jetty ",,,"
-                    :http-kit ",\n,")}
+  (is (= {"hello" ",,,"}
         (-> {:headers {"hello" ["," ","]}}
           api/capture-request
           :headers
           (select-keys ["hello"]))))
-  (is (= {"hello" (case api/connector-ident
-                    :jetty "a,c\\nd"
-                    :http-kit "a\nc\\nd")}
+  (is (= {"hello" "a,c\\nd"}
         (-> {:headers {"hello" ["a\n" "c\\nd"]}}
           api/capture-request
           :headers
