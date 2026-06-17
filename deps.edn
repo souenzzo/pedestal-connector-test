@@ -10,6 +10,11 @@
                                    "-Dorg.slf4j.simpleLogger.log.org.eclipse.jetty.session.DefaultSessionIdManager=warn"]
                       :extra-deps {io.pedestal/pedestal.jetty {:mvn/version "0.8.2-beta-9"}
                                    org.slf4j/slf4j-simple     {:mvn/version "2.0.18"}}}
+           :protojure {:jvm-opts   ["-Dpedestal-connector-test.api/create-connector=protojure.pedestal.core/create-connector"
+                                    "-Dorg.slf4j.simpleLogger.log.io.undertow=warn"
+                                    "-Dorg.jboss.logging.provider=slf4j"]
+                       :extra-deps {io.github.protojure/grpc-server {:mvn/version "3.0.1"}
+                                    org.slf4j/slf4j-simple          {:mvn/version "2.0.17"}}}
            :http-kit {:jvm-opts   ["-Dpedestal-connector-test.api/create-connector=io.pedestal.http.http-kit/create-connector"]
                       :extra-deps {io.pedestal/pedestal.http-kit {:mvn/version "0.8.2-beta-9"}}}
            :test     {:extra-paths ["test"]

@@ -6,11 +6,12 @@
 
 (comment
   (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.http-kit/create-connector")
-  (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.jetty/create-connector"))
+  (System/setProperty "pedestal-connector-test.api/create-connector" "io.pedestal.http.jetty/create-connector")
+  (System/setProperty "pedestal-connector-test.api/create-connector" "protojure.pedestal.core/create-connector"))
 
 (set! *warn-on-reflection* true)
 
-(deftest on-open
+(deftest ^:websocket on-open
   (let [*args (promise)
         evts (api/capture-ws-events {:on-open (fn [websocket-channel ring-request]
                                                 (deliver *args [websocket-channel
@@ -24,7 +25,7 @@
             #{:body :headers #_:protocol :query-string :remote-addr :request-method :scheme :server-name :server-port
               #_:ssl-client-cert :uri})))))
 
-(deftest on-open-return-value
+(deftest ^:websocket on-open-return-value
   (let [*args (promise)
         evts (api/capture-ws-events {:on-open (fn [_ _]
                                                 ::on-open-return)

@@ -23,3 +23,5 @@ jobs:
           key: cljdeps-${{ hashFiles('deps.edn') }}
       - run: clojure -X:jetty:test
       - run: clojure -X:http-kit:test
+      - run: clojure -M:protojure:test -e websocket
+        timeout-minutes: 1
