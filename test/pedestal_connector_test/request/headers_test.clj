@@ -29,4 +29,4 @@
           api/capture-request
           :headers
           (select-keys ["hello"])
-          (doto clojure.pprint/pprint)))))
+          #_(doto clojure.pprint/pprint)))))
